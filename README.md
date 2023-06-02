@@ -4,7 +4,6 @@
 ## Publisher
 - Game creator/publisher.
 - Only Publishers can register games and license information.
-- Registered game and license. Only the owner can.
 - Publisher can also be a Seller.
 
 ## Seller
