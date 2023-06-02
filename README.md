@@ -23,6 +23,6 @@
 - Coin only (It could be coin based on the SUI we created).
 - Sellers can proceed by converting to coins after paying with a credit card.
 
-## Sattle
+## Settle
 - Settlement between publisher and seller.
 - Send fee to publisher when user resell license key.
