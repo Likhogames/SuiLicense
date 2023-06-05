@@ -16,18 +16,18 @@ module proto_02::license {
     const ENotBuyer: u64 = 3;
 
 
-    // Game Publisher. 
-    // A Capability granting the bearer a right to `edit game info` 
-    // and 'listed, mint, regist license'
+    /// Game Publisher. 
+    /// A Capability granting the bearer a right to `edit game info` 
+    /// and 'listed, mint, regist license'
     struct GamePubCap has key, store{
         id: UID,
         for: ID
     }
 
-    // Objests
+    /// Objests
     struct Game has key, store {
         id: UID,
-        name: String,
+        name: String
 //        link: String,
 //        image_url : String,
 //        thumbnail_url : String,
@@ -50,12 +50,12 @@ module proto_02::license {
         license_id: ID
     }
 
-    // Events
+    /// Events
     struct GameListed has copy, drop{
         game: ID
     }
 
-    // Create game title. Would be publisher.
+    /// Create game title. Would be publisher.
     public fun create_game(
         name_bytes: vector<u8>, 
         ctx: &mut TxContext
@@ -74,7 +74,7 @@ module proto_02::license {
         (game, cap)
     }
 
-    // Create license. Only publisher
+    /// Create license. Only publisher
     public fun create_license<COIN>(
         game: &mut Game,
         cap: &GamePubCap,
@@ -98,32 +98,48 @@ module proto_02::license {
         license_id
     }
 
-    // User direct purchase license with coin
-    public fun buy_license<COIN>(
+    /// User direct purchase license with coin
+    public entry fun buy_license<COIN>(
         game: &mut Game,
         license_id: ID,
         paid: Coin<COIN>,   
         ctx: &mut TxContext
     ) {
 
-        // Coin stack to seller
+        let price = check_paid<COIN>(game, license_id, &paid);
+
+        // Settlement between seller and publisher
+        // paid - price = seller profit
+        let proceeds = coin::take(coin::balance_mut(&mut paid), price, ctx);
+
+        // Stack to publisher
+        if (dof::exists_<u64>(&mut game.id, 0)) {
+            coin::join(
+                dof::borrow_mut<u64, Coin<COIN>>(&mut game.id, 0),
+                proceeds
+            )
+        } else {
+            dof::add(&mut game.id, 0, proceeds);
+        };
+
+        // Stack to seller
         let License<COIN> {
             id: license_uid, 
-            price, 
+            price: _, 
             resale: _, 
             limit_auth: _, 
             seller
         } = dof::borrow_mut(&mut game.id, license_id);
-        assert!(*price == coin::value(&paid), EAmountIncorrect);
-        
+
         if (dof::exists_<address>(license_uid, *seller)) {
             coin::join(
                 dof::borrow_mut<address, Coin<COIN>>(license_uid, *seller),
                 paid
             )
         } else {
-            dof::add(license_uid, *seller, paid)
+            dof::add(license_uid, *seller, paid);
         };
+
 
         // Mint and send license key to buyer
         let license_key = LicenseKey{
@@ -134,9 +150,29 @@ module proto_02::license {
         transfer::public_transfer(license_key, tx_context::sender(ctx))
     }
 
-    // Call function for seller giving license to user 
-    // after User purchase license by other system.
-    public fun buy_license_callback<COIN>(
+    public fun check_paid<COIN>(
+        game: &mut Game,
+        license_id: ID,
+        paid: &Coin<COIN>
+    ): u64{
+        // Check seller
+        let License<COIN> {
+            id: _, 
+            price, 
+            resale: _, 
+            limit_auth: _, 
+            seller: _
+        } = dof::borrow_mut(&mut game.id, license_id);
+
+        // Check paid
+        assert!(*price <= coin::value(paid), EAmountIncorrect);
+
+        *price
+    }
+
+    /// Call function for seller giving license to user 
+    /// after User purchase license by other system(Credit Card).
+    public entry fun buy_license_callback<COIN>(
         game: &mut Game,
         license_id: ID,
         buyer: address,
@@ -162,14 +198,22 @@ module proto_02::license {
         transfer::public_transfer(license_key, buyer)
     }
 
-    // License authentication.
-    // Only buyers can pass through.
-    public fun auth<COIN>(
-        license: &mut License<COIN>,
+    /// License authentication.
+    /// Only buyers can pass through.
+    public entry fun auth<COIN>(
+        game: &mut Game,
         license_key: &LicenseKey,
         ctx: &mut TxContext
     ) {
-        let buyer = df::borrow<ID, address>(&mut license.id, object::id(license_key));
+        let License<COIN> {
+            id: license_uid, 
+            price: _, 
+            resale: _, 
+            limit_auth: _, 
+            seller: _
+        } = dof::borrow_mut(&mut game.id, license_key.license_id);
+
+        let buyer = df::borrow<ID, address>(license_uid, object::id(license_key));
 
         // [TODO] Check limit auth count
         // ...
@@ -178,14 +222,24 @@ module proto_02::license {
         assert!(*buyer == tx_context::sender(ctx), ENotBuyer)
     }
 
-    // Transaction between users.
-    public fun change_buyer<COIN>(
-        license: &mut License<COIN>,
+    /// Transaction between users.
+    public entry fun change_buyer<COIN>(
+        game: &mut Game,
         license_key: &LicenseKey,
         new_buyer: address,
         ctx: &mut TxContext
     ){
-        auth(license, license_key, ctx);
+
+        let License<COIN> {
+            id: license_uid, 
+            price: _, 
+            resale: _, 
+            limit_auth: _, 
+            seller: _
+        } = dof::borrow_mut(&mut game.id, license_key.license_id);
+
+        let buyer = df::borrow<ID, address>(license_uid, object::id(license_key));
+        assert!(*buyer == tx_context::sender(ctx), ENotBuyer);
 
         // [TODO] Check resale is possible
         // ...
@@ -196,7 +250,20 @@ module proto_02::license {
         // ...
 
         // Change buyer
-        df::add(&mut license.id, object::id(license_key), new_buyer)
+        df::add(license_uid, object::id(license_key), new_buyer);
+    }
+
+    /// Transfer Coin to the publisher.
+    public entry fun take_proceeds<COIN>(
+        game: &mut Game,
+        cap: &GamePubCap,
+        ctx: &mut TxContext
+    ) {
+        assert!(object::id(game) == cap.for, ENotPublisher);
+
+        let proceeds = dof::remove<u64, Coin<COIN>>(&mut game.id, 0);
+
+        transfer::public_transfer(proceeds, tx_context::sender(ctx))
     }
 }
 
@@ -268,20 +335,42 @@ module proto_02::Tests {
         test_scenario::return_to_sender(&mut scenario, user_coin);
 
 
-        // Check
+        // Auth License USER1
+        test_scenario::next_tx(&mut scenario, USER1);
         let user1_key = test_scenario::take_from_address<LicenseKey>(&mut scenario, USER1);
-        debug::print(&user1_key);
+        license::auth<SUI>(
+            &mut game,
+            &user1_key,
+            test_scenario::ctx(&mut scenario)
+        );
         test_scenario::return_to_address(USER1, user1_key);
 
         
-        // Check
-        // let user2_key = test_scenario::take_from_sender<LicenseKey>(&mut scenario);
-         let ids = test_scenario::most_recent_id_for_sender<LicenseKey>(&mut scenario);
-         debug::print(&ids);
-        // test_scenario::return_to_sender(&mut scenario, user2_key);
+        // Auth License USER2
+        test_scenario::next_tx(&mut scenario, USER2);
+        let user2_key = test_scenario::take_from_sender<LicenseKey>(&mut scenario);
+         license::auth<SUI>(
+            &mut game,
+            &user2_key,
+            test_scenario::ctx(&mut scenario)
+        );
+        test_scenario::return_to_sender(&mut scenario, user2_key);
 
 
         // Auth License
+        test_scenario::next_tx(&mut scenario, COMPANY1);
+        license::take_proceeds<SUI>(
+            &mut game,
+            &cap,
+            test_scenario::ctx(&mut scenario)
+        );
+
+
+        // Check Coin
+        test_scenario::next_tx(&mut scenario, LIKHO);
+        let company_coin = test_scenario::take_from_address<Coin<SUI>>(&mut scenario, COMPANY1);
+        debug::print(&company_coin);
+        test_scenario::return_to_address(COMPANY1, company_coin);
 
         
         // End Test
