@@ -1,5 +1,5 @@
-# About Sui License (Working name)
-<img src="/img/SuiLicense_Flow.png/" width="80%" title="SuiLicense Flow" alt="Excalidraw"></img>
+# About Proi Protocol
+<img src="/img/SuiLicense_Flow.png/" width="80%" title="ProiProtocol Flow" alt="Excalidraw"></img>
 
 ## Publisher
 - Game creator/publisher.
