@@ -1,5 +1,5 @@
 # About Sui License (Working name)
-<img src="/img/SuiLicense_Flow.png/" width="80%" title="SuiLicense Flow" alt="Excalidraw"></img>
+Proi Protocol is a decentralized protocol for game distribution, akin to a Web3 iteration of Steam or Epic Games Store. It is an open protocol with permissionless access, enabling third parties to create bespoke interfaces or seamlessly integrate the protocol within applications or games. Though the protocol is implemented on the blockchain, it will support both traditional and Web3 format games and contents.
 
 ## Publisher
 - Game creator or publisher.
