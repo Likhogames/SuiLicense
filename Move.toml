@@ -1,9 +1,9 @@
 [package]
-name = "proto_02"
+name = "ProiProtocol"
 version = "0.0.1"
 
 [dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/devnet" }
 
 [addresses]
-proto_02 = "0x0"
+ProiProtocol = "0x0"

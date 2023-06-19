@@ -1,4 +1,4 @@
-module proto_02::license {
+module ProiProtocol::license {
     
     use std::string::{Self, String};
 
@@ -268,8 +268,8 @@ module proto_02::license {
 }
 
 #[test_only]
-module proto_02::Tests {
-    use proto_02::license::{Self, LicenseKey};
+module ProiProtocol::Tests {
+    use ProiProtocol::license::{Self, LicenseKey};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
     use sui::test_scenario;
