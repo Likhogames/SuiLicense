@@ -217,10 +217,10 @@ Game Object에 종속되어 판매 금액, 인증 및 재판매에 대한 정보
 |Name|Type|Description|
 |:---:|:---:|:---|
 |proi_shop|Object<ProiShop>|Proi Shop shared object|
-|game_id|String|Proi Shop shared object|
-|license_id|ObjectID|Proi Shop shared object|
-|paid|Coin<COIN><ProiShop>|Proi Shop shared object| 
-|buyer|Address|Buyer address| 
+|game_id|String|게임 ID|
+|license_id|ObjectID|라이선스 ID|
+|paid|Coin<COIN><ProiShop>|구매 금액| 
+|buyer|Address|구매자 주소| 
 
 ### authenticate
 라이선스 인증
@@ -249,7 +249,7 @@ Game Object에 종속되어 판매 금액, 인증 및 재판매에 대한 정보
 |:---:|:---:|:---|
 |proi_shop|Object<ProiShop>|Proi Shop shared object|
 |license_key_id|sui::object::ID|ID from LicenseKey UID|
-|paid|Coin<COIN><ProiShop>|Proi Shop shared object| 
+|paid|Coin<COIN><ProiShop>|구매 금액| 
 
 * * *
 ## Functions
