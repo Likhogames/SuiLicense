@@ -1,7 +1,7 @@
+// Copyright (c) ProiProtocol, Inc.
 module ProiProtocol::shop {
     
     use std::string::{Self, String};
-    //use std::vector;
 
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
@@ -12,7 +12,6 @@ module ProiProtocol::shop {
     use sui::event;
     use sui::tx_context::{Self, TxContext};
     use sui::vec_map::{Self,VecMap};
-    use sui::object_bag::{Self, ObjectBag};
 
     use ProiProtocol::proi::{PROI};
 
@@ -27,17 +26,11 @@ module ProiProtocol::shop {
     const ENotEnoughAuthCount: u64 = 8;
     const ENotAllowedResell: u64 = 9;
     const ENotExistItemID: u64 = 10;
+    const EOutOfIndex: u64 = 11;
 
     const MaxDiscount: u64 = 10000;
     const MaxPurchaseFeeRate: u64 = 10000;
-
-    // Game Publisher. 
-    // A Capability granting the bearer a right to `edit game info` 
-    // and 'listed, mint, regist license'
-    struct GamePubCap has key, store{
-        id: UID,
-        for: ID
-    }
+    const MaxRoyaltyRate: u64 = 10000;
 
     // Objests
     struct ProiShop has key {
@@ -51,7 +44,7 @@ module ProiProtocol::shop {
 
     struct ResellerShop has key {
         id: UID,
-        game_list: VecMap<String, ObjectBag>    // key : game_id, val : listed ResellerItem
+        item_list: VecMap<ID, ResellerItem>    // key : game_id, val : listed ResellerItem
     }
     
     struct ResellerItem has key, store {
@@ -79,6 +72,11 @@ module ProiProtocol::shop {
         license_list: VecMap<ID, License> 
     }
 
+    struct GamePubCap has key, store{
+        id: UID,
+        for: ID
+    }
+
     struct License has key, store {
         id: UID,
         name: String,
@@ -102,7 +100,7 @@ module ProiProtocol::shop {
         user: address
     }
 
-    // Events
+    /// Events
     struct RegisterGameEvent has copy, drop{
         game_id: String
     }
@@ -120,7 +118,6 @@ module ProiProtocol::shop {
         item_id: ID
     }
 
-    // Function
     fun init(ctx: &mut TxContext) {        
         let p_storage = PurchaseFeeStorage{
             id: object::new(ctx),
@@ -142,11 +139,11 @@ module ProiProtocol::shop {
 
         transfer::share_object(ResellerShop {
             id: object::new(ctx),
-            game_list: vec_map::empty<String, ObjectBag>()
+            item_list: vec_map::empty<ID, ResellerItem>()
         });
     }
 
-    // Regist game. Would be publisher.
+    // Regist game
     public entry fun regist_game(
         proi_shop: &mut ProiShop,
         game_id_bytes: vector<u8>,
@@ -193,6 +190,7 @@ module ProiProtocol::shop {
         // TODO : Update Game Object
     }
 
+    /// Create License
     public entry fun create_license(
         proi_shop: &mut ProiShop,
         cap: &GamePubCap,
@@ -241,6 +239,7 @@ module ProiProtocol::shop {
         // TODO : Update License Object
     } 
 
+    /// Purchase License
     public entry fun purchase(
         proi_shop: &mut ProiShop,
         game_id_bytes: vector<u8>,
@@ -300,6 +299,7 @@ module ProiProtocol::shop {
         transfer::public_transfer(license_key, buyer)
     }
 
+    /// Authenticate in game sdk
     public entry fun authenticate(
         proi_shop: &mut ProiShop,
         license_key: &mut LicenseKey,
@@ -323,6 +323,14 @@ module ProiProtocol::shop {
             license_key.user = sender;
         };
     }
+    
+    public fun get_game(
+        proi_shop: & ProiShop,
+        game_id: & String
+    ): & Game{
+        assert!(vec_map::contains(&proi_shop.game_list, game_id) == true, ENotExistGameID);
+        vec_map::get(&proi_shop.game_list, game_id)
+    }
 
     public fun get_license(
         game_list: & VecMap<String, Game>,
@@ -335,6 +343,16 @@ module ProiProtocol::shop {
         vec_map::get(& game.license_list, license_id)
     }
 
+    public fun get_license_by_idx(
+        game: & Game,
+        idx: u64
+    ): & License{
+        assert!(vec_map::size(&game.license_list) > idx, EOutOfIndex);
+        let (_, license) = vec_map::get_entry_by_idx(& game.license_list, idx);
+        license
+    }
+
+    /// List LicenseKey for reselling
     public entry fun list_license_key(
         proi_shop: &mut ProiShop,
         reseller_shop: &mut ResellerShop,
@@ -360,7 +378,6 @@ module ProiProtocol::shop {
         assert!(license.limit_auth_count > license_key.auth_count, ENotEnoughAuthCount);
         
         // Create reselling item
-        let game_id = license_key.game_id;
         let reseller = string::utf8(reseller_bytes);
         let description = string::utf8(description_bytes);
         let item = ResellerItem{
@@ -372,31 +389,26 @@ module ProiProtocol::shop {
         };
 
         // Save reselling list
-        let game_list = &mut reseller_shop.game_list;
-        if (vec_map::contains(game_list, &game_id) == true){
-            let item_list = vec_map::get_mut(game_list, &game_id);
-            object_bag::add(item_list, object::id(&item), item);
-        }else{
-            let item_list = object_bag::new(ctx);
-            object_bag::add(&mut item_list, object::id(&item), item);
-            vec_map::insert(game_list, game_id, item_list);
-        };
+        let item_list = &mut reseller_shop.item_list;
+        vec_map::insert(item_list, object::id(&item), item);
     }
 
+    /// Resell Item
     public entry fun resell(
         proi_shop: &mut ProiShop,
         reseller_shop: &mut ResellerShop,
-        game_id: & String,
+        game_id_bytes: vector<u8>,
         item_id: ID,
         paid: Coin<PROI>,
+        buyer: address,
         ctx: &mut TxContext
     ){
+        let game_id = string::utf8(game_id_bytes);
+
         // Load Item
-        let game_list = &mut reseller_shop.game_list;
-        assert!(vec_map::contains(game_list, game_id) == true, ENotExistGameID);
-        let item_list = vec_map::get_mut(game_list, game_id);
-        assert!(object_bag::contains_with_type<ID, LicenseKey>(item_list, item_id) == true, ENotExistItemID);
-        let item_info = object_bag::borrow<ID, ResellerItem>(item_list, item_id);
+        let item_list = &mut reseller_shop.item_list;
+        assert!(vec_map::contains(item_list, &item_id) == true, ENotExistItemID);
+        let item_info = vec_map::get<ID, ResellerItem>(item_list, &item_id);
 
         // Check paid
         assert!(item_info.price == coin::value(&paid), EInsufficientFunds);
@@ -410,117 +422,56 @@ module ProiProtocol::shop {
         );
 
         if (license.royalty_rate > 0){
-            
+            let royalty_price = item_info.price - (item_info.price * license.royalty_rate / MaxRoyaltyRate);
+            let royalty = coin::take(coin::balance_mut(&mut paid), royalty_price, ctx);
+
+            // Save Royalty
+            if (dof::exists_<String>(&reseller_shop.id, game_id)) {
+                coin::join(
+                    dof::borrow_mut<String, Coin<PROI>>(&mut proi_shop.id, game_id),
+                    royalty
+                );
+            } else {
+                dof::add(&mut reseller_shop.id, game_id, royalty);
+            };
+        };
+        
+        // Save paid
+        if (dof::exists_<address>(&reseller_shop.id, license_key.owner)) {
+            coin::join(
+                dof::borrow_mut<address, Coin<PROI>>(&mut proi_shop.id, license_key.owner),
+                paid
+            );
+        } else {
+            dof::add(&mut reseller_shop.id, license_key.owner, paid);
         };
 
-        // Save paid
-
         // Transfer item
+        let (_, origin_item_info) = vec_map::remove<ID, ResellerItem>(item_list, &item_id);
+        let ResellerItem{
+            id,
+            reseller: _reseller,
+            description: _description,
+            price: _price,
+            item: origin_license_key
+        } = origin_item_info;
+
+        origin_license_key.owner = buyer;
+        transfer::transfer(origin_license_key, buyer);
+        object::delete(id)
     }
 
-    // // User direct purchase license with coin
-    // public fun buy_license<COIN>(
-    //     game: &mut Game,
-    //     license_id: ID,
-    //     paid: Coin<COIN>,   
-    //     ctx: &mut TxContext
-    // ) {
-
-    //     // Coin stack to seller
-    //     let License<COIN> {
-    //         id: license_uid, 
-    //         price, 
-    //         resale: _, 
-    //         limit_auth: _, 
-    //         seller
-    //     } = dof::borrow_mut(&mut game.id, license_id);
-    //     assert!(*price == coin::value(&paid), EAmountIncorrect);
-        
-    //     if (dof::exists_<address>(license_uid, *seller)) {
-    //         coin::join(
-    //             dof::borrow_mut<address, Coin<COIN>>(license_uid, *seller),
-    //             paid
-    //         )
-    //     } else {
-    //         dof::add(license_uid, *seller, paid)
-    //     };
-
-    //     // Mint and send license key to buyer
-    //     let license_key = LicenseKey{
-    //         id: object::new(ctx),
-    //         license_id: license_id
-    //         };
-    //     df::add<ID, address>(license_uid, object::id(&license_key), tx_context::sender(ctx));
-    //     transfer::public_transfer(license_key, tx_context::sender(ctx))
-    // }
-
-    // // Call function for seller giving license to user 
-    // // after User purchase license by other system.
-    // public fun buy_license_callback<COIN>(
-    //     game: &mut Game,
-    //     license_id: ID,
-    //     buyer: address,
-    //     ctx: &mut TxContext
-    // ) {
-
-    //     // Check seller
-    //     let License<COIN> {
-    //         id: license_uid, 
-    //         price: _, 
-    //         resale: _, 
-    //         limit_auth: _, 
-    //         seller
-    //     } = dof::borrow_mut(&mut game.id, license_id);
-    //     assert!(*seller == tx_context::sender(ctx), ENotOwner);
-
-    //     let license_key = LicenseKey{
-    //         id: object::new(ctx),
-    //         license_id: license_id
-    //         };
-            
-    //     df::add<ID, address>(license_uid, object::id(&license_key), buyer);
-    //     transfer::public_transfer(license_key, buyer)
-    // }
-
-    // // License authentication.
-    // // Only buyers can pass through.
-    // public fun auth<COIN>(
-    //     license: &mut License<COIN>,
-    //     license_key: &LicenseKey,
-    //     ctx: &mut TxContext
-    // ) {
-    //     let buyer = df::borrow<ID, address>(&mut license.id, object::id(license_key));
-
-    //     // [TODO] Check limit auth count
-    //     // ...
-    //     // ...
-
-    //     assert!(*buyer == tx_context::sender(ctx), ENotBuyer)
-    // }
-
-    // // Transaction between users.
-    // public fun change_buyer<COIN>(
-    //     license: &mut License<COIN>,
-    //     license_key: &LicenseKey,
-    //     new_buyer: address,
-    //     ctx: &mut TxContext
-    // ){
-    //     auth(license, license_key, ctx);
-
-    //     // [TODO] Check resale is possible
-    //     // ...
-    //     // ...
-
-    //     // [TODO] Send fee to Publisher or Creator or Seller
-    //     // ...
-    //     // ...
-
-    //     // Change buyer
-    //     df::add(&mut license.id, object::id(license_key), new_buyer)
-    // }
 
     #[test_only]
     public fun init_for_testing(ctx: &mut TxContext) {
         init(ctx)
+    }
+    #[test_only]
+    public fun get_item_id_by_idx_for_testing(
+        reseller_shop: &ResellerShop,
+        idx: u64
+    ): ID {
+        let (_, v) = vec_map::get_entry_by_idx<ID, ResellerItem>(&reseller_shop.item_list, idx);
+        object::id(v)
     }
 }

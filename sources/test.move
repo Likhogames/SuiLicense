@@ -1,15 +1,13 @@
 #[test_only]
 module ProiProtocol::Tests {
-    use ProiProtocol::shop::{Self, ProiShop, GamePubCap, LicenseKey};
+    use ProiProtocol::shop::{Self, ProiShop, GamePubCap, LicenseKey, ResellerShop};
     use ProiProtocol::proi::{Self, PROI};
     
     use std::debug;
-//    use std::string::{Self, String};
+    use std::string::{Self};
     use sui::coin::{Self, Coin, TreasuryCap};
     use sui::object;
     use sui::test_scenario;
-//    use sui::vec_map::{Self, VecMap};
-//    use sui::transfer;
 
     const LIKHO:address = @0xBABE;
     const PUBLISHER:address = @0xCAFE;
@@ -41,7 +39,7 @@ module ProiProtocol::Tests {
 
             proi::mint(
                 &mut t_cap,
-                100,
+                200,
                 SELLER,
                 ctx
             );
@@ -103,10 +101,14 @@ module ProiProtocol::Tests {
             let ctx = test_scenario::ctx(scenario);
             let paid = coin::take(coin::balance_mut(&mut seller_coin), 70, ctx);
 
+            let game_id = string::utf8(game_id_bytes);
+            let game = shop::get_game(&proi_shop, &game_id);
+            let license = shop::get_license_by_idx(game, 0);
+
             shop::purchase(
                 &mut proi_shop,
                 game_id_bytes,
-                object::id_from_address(@0x75c3360eb19fd2c20fbba5e2da8cf1a39cdb1ee913af3802ba330b852e459e05),
+                object::id(license),
                 paid,
                 USER1,
                 ctx
@@ -117,7 +119,7 @@ module ProiProtocol::Tests {
             test_scenario::return_shared(proi_shop);
         };
 
-        // Authenticate
+        // Authenticate USER1
         test_scenario::next_tx(scenario, USER1);
         {
             let proi_shop = test_scenario::take_shared<ProiShop>(scenario);
@@ -134,53 +136,72 @@ module ProiProtocol::Tests {
             test_scenario::return_shared(proi_shop);
         };
 
-        // // Give License By Companey
-        // license::buy_license_callback<SUI>(
-        //     &mut game,
-        //     license_id,
-        //     USER1,
-        //     test_scenario::ctx(&mut scenario)
-        // );
+        // List licensekey for reselling
+        let tx_result = test_scenario::next_tx(scenario, USER1);
+        {
+            let proi_shop = test_scenario::take_shared<ProiShop>(scenario);
+            let reseller_shop = test_scenario::take_shared<ResellerShop>(scenario);
+            let license_key = test_scenario::take_from_sender<LicenseKey>(scenario);
+            let ctx = test_scenario::ctx(scenario);
 
+            shop::list_license_key(
+                &mut proi_shop,
+                &mut reseller_shop,
+                license_key,
+                b"User1",
+                b"Daiblo4 License key",
+                50,
+                ctx
+            );
+            debug::print(&reseller_shop);
+            test_scenario::return_shared(reseller_shop);
+            test_scenario::return_shared(proi_shop);
+        };
+        debug::print(&tx_result);
+
+        // Resell
+        test_scenario::next_tx(scenario, SELLER);
+        {
+            let proi_shop = test_scenario::take_shared<ProiShop>(scenario);
+            let reseller_shop = test_scenario::take_shared<ResellerShop>(scenario);
+            let seller_coin = test_scenario::take_from_sender<Coin<PROI>>(scenario);
+            let ctx = test_scenario::ctx(scenario);
+
+            let paid = coin::take(coin::balance_mut(&mut seller_coin), 50, ctx);
+            let item_id = shop::get_item_id_by_idx_for_testing(&reseller_shop,0);
+
+            shop::resell(
+                &mut proi_shop,
+                &mut reseller_shop,
+                b"com.blizzard.diablo4",
+                item_id,
+                paid,
+                USER2,
+                ctx
+            );
+            
+            test_scenario::return_to_sender(scenario, seller_coin);
+            test_scenario::return_shared(reseller_shop);
+            test_scenario::return_shared(proi_shop);
+        };
         
-        // // Buy License
-        // // - mint test sui
-        // test_scenario::next_tx(&mut scenario, LIKHO);
-        // let coin = coin::mint_for_testing<SUI>(1000, test_scenario::ctx(&mut scenario));
-        // transfer::public_transfer(coin, USER2);
-        
-        // // - buy license
-        // test_scenario::next_tx(&mut scenario, USER2);
-        // let user_coin = test_scenario::take_from_sender<Coin<SUI>>(&mut scenario);
-        // let payment = coin::take(coin::balance_mut(&mut user_coin), 100, test_scenario::ctx(&mut scenario));
-        // license::buy_license<SUI>(
-        //     &mut game,
-        //     license_id,
-        //     payment,
-        //     test_scenario::ctx(&mut scenario)
-        // );
-        // test_scenario::return_to_sender(&mut scenario, user_coin);
+        // Authenticate USER2
+        test_scenario::next_tx(scenario, USER2);
+        {
+            let proi_shop = test_scenario::take_shared<ProiShop>(scenario);
+            let license_key = test_scenario::take_from_sender<LicenseKey>(scenario);
+            let ctx = test_scenario::ctx(scenario);
 
+            shop::authenticate(
+                &mut proi_shop,
+                &mut license_key,
+                ctx
+            );
+            debug::print(&license_key);
+            test_scenario::return_to_sender(scenario, license_key);
+            test_scenario::return_shared(proi_shop);
+        };
 
-        // // Check
-        // let user1_key = test_scenario::take_from_address<LicenseKey>(&mut scenario, USER1);
-        // debug::print(&user1_key);
-        // test_scenario::return_to_address(USER1, user1_key);
-
-        
-        // // Check
-        // // let user2_key = test_scenario::take_from_sender<LicenseKey>(&mut scenario);
-        //  let ids = test_scenario::most_recent_id_for_sender<LicenseKey>(&mut scenario);
-        //  debug::print(&ids);
-        // // test_scenario::return_to_sender(&mut scenario, user2_key);
-
-
-        // // Auth License
-
-        
-        // // End Test
-        // transfer::public_transfer(game, COMPANY1);
-        // transfer::public_transfer(cap, COMPANY1);
         test_scenario::end(scenario_val);        
         
     }
