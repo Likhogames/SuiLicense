@@ -15,7 +15,7 @@ Game과 라이센스를 등록하고 판매하는 마켓 플레이스 스마트�
 - [API Doc](/docs/api/shop.md)
 ### Module `Proi`
 Proi Protocol 상에서 이루어지는 모든 상업적 거래는 PROI token을 이용해야합니다. Proi 모듈은 스테이킹, store, transfer 등 전반적인 PROI 토큰의 스마트컨트렉트에 대한 모듈입니다. 
-- [token](/sources/proi.move)
+- [source](/sources/proi.move)
 - `NotReady`[API Doc](/docs/api/proi.md)
 * * *
 ## Link
