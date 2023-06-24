@@ -42,6 +42,30 @@ module ProiProtocol::shop {
         submission_fee_storage: SubmissionFeeStorage
     }
 
+    struct Game has key, store {
+        id: UID,
+        game_id: String,
+        name: String,
+        // For testing purposes, other fields have been omitted. 
+        // You can refer to the API documentation for the omitted fields.
+        license_list: VecMap<ID, License> 
+    }
+
+    struct GamePubCap has key, store{
+        id: UID,
+        for: ID
+    }
+
+    struct PurchaseFeeStorage has key, store{
+        id: UID,
+        fees: Balance<PROI>
+    }
+
+    struct SubmissionFeeStorage has key, store {
+        id: UID,
+        fees: Balance<PROI>
+    }
+
     struct ResellerShop has key {
         id: UID,
         item_list: VecMap<ID, ResellerItem>    // key : game_id, val : listed ResellerItem
@@ -53,28 +77,6 @@ module ProiProtocol::shop {
         description: String,
         price: u64,
         item: LicenseKey
-    }
-    
-    struct SubmissionFeeStorage has key, store {
-        id: UID,
-        fees: Balance<PROI>
-    }
-
-    struct PurchaseFeeStorage has key, store{
-        id: UID,
-        fees: Balance<PROI>
-    }
-
-    struct Game has key, store {
-        id: UID,
-        game_id: String,
-        name: String,
-        license_list: VecMap<ID, License> 
-    }
-
-    struct GamePubCap has key, store{
-        id: UID,
-        for: ID
     }
 
     struct License has key, store {
@@ -114,7 +116,6 @@ module ProiProtocol::shop {
         license_key_id: ID
     }
     struct ResellEvent has copy, drop{
-        game_id: String,
         item_id: ID
     }
 
@@ -156,7 +157,8 @@ module ProiProtocol::shop {
         assert!(vec_map::contains(&proi_shop.game_list, &game_id) == false, EAlreadyExistGameID);
         
         // Check submit fee
-        assert!(proi_shop.submission_fee == coin::value(&submission_fee), EInsufficientFee);
+        let proi_fee_amount = change_price_usd_to_proi(proi_shop.submission_fee);
+        assert!(proi_fee_amount == coin::value(&submission_fee), EInsufficientFee);
         df::add<String, u64>(&mut proi_shop.id, game_id, coin::value(&submission_fee));
         
         // Pay a fee
@@ -257,11 +259,12 @@ module ProiProtocol::shop {
         if (license.discount_rate > 0){
             publisher_price = publisher_price - (publisher_price * license.discount_rate / MaxDiscount);
         };
-        assert!(publisher_price == coin::value(&paid), EInsufficientFunds);
+        let proi_price = change_price_usd_to_proi(publisher_price);
+        assert!(proi_price == coin::value(&paid), EInsufficientFunds);
         
         // Pay a fee
-        if (publisher_price > 0){
-            let fee = publisher_price - (publisher_price * proi_shop.purchase_fee_rate / MaxPurchaseFeeRate);
+        if (proi_price > 0){
+            let fee = proi_price - (proi_price * proi_shop.purchase_fee_rate / MaxPurchaseFeeRate);
             let purchase_fee = coin::take(coin::balance_mut(&mut paid), fee, ctx);
             let fee_storage = &mut proi_shop.purchase_fee_storage;
             balance::join(&mut fee_storage.fees, coin::into_balance(purchase_fee));
@@ -411,7 +414,8 @@ module ProiProtocol::shop {
         let item_info = vec_map::get<ID, ResellerItem>(item_list, &item_id);
 
         // Check paid
-        assert!(item_info.price == coin::value(&paid), EInsufficientFunds);
+        let proi_price = change_price_usd_to_proi(item_info.price);
+        assert!(proi_price == coin::value(&paid), EInsufficientFunds);
 
         // Royalty
         let license_key = &item_info.item;
@@ -458,9 +462,20 @@ module ProiProtocol::shop {
 
         origin_license_key.owner = buyer;
         transfer::transfer(origin_license_key, buyer);
-        object::delete(id)
+        object::delete(id);
+
+        // Emit Event
+        event::emit(ResellEvent{item_id})
     }
 
+    /// exchange usd to proi
+    public fun change_price_usd_to_proi(
+        usd: u64
+    ): u64{
+        // For testing purposes, PROI has been set to be converted to USD at a 1:1 ratio. 
+        // In the future, Every day at a specified time, the PROI:USD ratio is refreshed and applied through Oracle.
+        usd
+    }
 
     #[test_only]
     public fun init_for_testing(ctx: &mut TxContext) {
