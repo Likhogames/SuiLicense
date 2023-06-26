@@ -16,16 +16,11 @@ module ProiProtocol::proi {
         transfer::public_transfer(treasury, tx_context::sender(ctx))
     }
 
-    // public fun SubmissionFee(
-    //    submit_fee: Coin<PROI>
-    // ) {
-    //     // Check fee
-
-    //     // Save
-    // }
-
     public entry fun mint(
-        treasury_cap: &mut TreasuryCap<PROI>, amount: u64, recipient: address, ctx: &mut TxContext
+        treasury_cap: &mut TreasuryCap<PROI>,
+        amount: u64,
+        recipient: address,
+        ctx: &mut TxContext
     ) {
         coin::mint_and_transfer(treasury_cap, amount, recipient, ctx)
     }

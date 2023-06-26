@@ -1,6 +1,6 @@
 # Module `ProiProtocol::shop`
 ## Struct `ProiShop`
-Game Marketplace Object. It stores information about fees and game details and is shared as a Shared Object when the module is deployed.
+게임 마켓플레이스 Object. 수수료에 관한 정보와 게임 정보를 저장하고 있으며 모듈 배포 시 Shared Object로 공유됩니다.
 ```rust
 struct ProiShop has key {
     id: UID,
@@ -14,19 +14,19 @@ struct ProiShop has key {
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `submission_fee`: Submission fee(PROI).Update the 100USD:PROI ratio daily through Oracle
-- `purchase_fee_rate`: Purchase fee rate
-- `game_list`: Game list
-    - key - The game_id, which uniquely identifies a game.
-    - value - The Game Object that stores game information.
-- `purchase_fee_storage`: Storage Object for purchase fee
-- `submission_fee_storage`: Storage Object for submission fee
+- `id`: Sui 오브젝트 고유 아이디
+- `submission_fee`: 게임 등록 수수료(PROI). Oracle을 통해 매일 100USD:?PROI 비율로 업데이트
+- `purchase_fee_rate`: 구매 수수료 비율
+- `game_list`: 게임 리스트
+    - key - 게임을 고유하게 구분할 수 있는 game_id. 게임 등록 시 입력
+    - value - 게임 정보를 저장하고 있는 Game Object
+- `purchase_fee_storage`: 구매 수수료 저장소 Object
+- `submission_fee_storage`: 게임 등록 수수료 저장소 Object
 
 </details>
 
 ## Struct `Game`
-The Game Object that stores game information.
+게임 정보 Object
 ```rust
 struct Game has key, store {
     id: UID,
@@ -51,30 +51,30 @@ struct Game has key, store {
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `game_id`: The game_id, which uniquely identifies a game
-- `name`: Game name
-- `thumbnail`: Game representative image (thumbnail image)
-- `image_url`: List of Game introduction image URLs
-- `video_url`: List of Game introduction video URLs
-- `short_description`: Short game introduction in different languages
+- `id`: Sui 오브젝트 고유 아이디
+- `game_id`: 게임을 고유하게 구분할 수 있는 game_id
+- `name`: 게임 이름
+- `thumbnail`: 대표 이미지(작은 이미지)
+- `image_url`: 게임 소개 이미지 URL 리스트
+- `video_url`: 게임 소개 영상 URL 리스트
+- `short_intro`: 언어별 짧은 게임 소개
     - key - ISO 639 Alpha-2 Language code
-    - value - Short game introduction
-- `description`: Game description. recommanded markdown
-- `release_date`: release date
-- `genre`: genre
-- `developer`: Game developer name
-- `publisher`: Game publisher name
-- `language`: List of support language, ISO 639 Alpha-2 Language code
-- `platform`: List of support platform
-- `system_requirements`: System specs and requirements. recommanded markdown
-- `sale_lock`: sales On/Off
-- `license_list`: List of License Object that store game price and authentication information.
+    - value - 게임 소개 
+- `intro`: 게임 소개 글. 마크다운 문법 권장
+- `release_date`: 출시 일자
+- `genre`: 장르
+- `developer`: 개발사
+- `publisher`: 배급사
+- `language`: 지원 언어 리스트, ISO 639 Alpha-2 Language code
+- `platform`: 지원 플랫폼 리스트
+- `system_requirements`: 시스템 권장 사양. 마크다운 문법 권장
+- `sale_lock`: 판매 On/Off
+- `license_list`: 게임 가격과 인증 정보가 저장되어 있는 License Object List 
 
 </details>
 
 ## Struct `GamePubCap`
-Capability Object for Game Object.
+Game Object에 대한 권한 증명 오브젝트
 ```rust
 struct GamePubCap has key, store{
     id: UID,
@@ -84,13 +84,13 @@ struct GamePubCap has key, store{
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
+- `id`: Sui 오브젝트 고유 아이디
 - `for`: Game Object ID
 
 </details>
 
 ## Struct `PurchaseFeeStorage`
-Storage Object for purchase fee
+구매 수수료 저장소 Object
 ```rust
 struct PurchaseFeeStorage has key, store{
     id: UID,
@@ -100,13 +100,13 @@ struct PurchaseFeeStorage has key, store{
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `fees`: stored PROI token
+- `id`: Sui 오브젝트 고유 아이디
+- `fees`: 저장된 PROI 토큰
 
 </details>
 
 ## Struct `SubmissionFeeStorage`
-Storage Object for submission fee
+게임 등록 수수료 저장소 Object
 ```rust
 struct SubmissionFeeStorage has key, store{
     id: UID,
@@ -116,13 +116,13 @@ struct SubmissionFeeStorage has key, store{
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `fees`: stored PROI token
+- `id`: Sui 오브젝트 고유 아이디
+- `fees`: 저장된 PROI 토큰
 
 </details>
 
 ## Struct `ResellerShop`
-Marketplace Object for reseller. It stores information about resold items and is shared as a Shared Object when the module is deployed.
+재판매 마켓플레이스 Object. 구매한 게임을 재판매 하기 위한 정보가 저장되어 있으며 모듈 배포 시 Shared Object로 공유됩니다.
 ```rust
 struct ResellerShop has key {
     id: UID,
@@ -132,15 +132,15 @@ struct ResellerShop has key {
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `item_list`: List of resale items composed of vector maps.
+- `id`: Sui 오브젝트 고유 아이디
+- `item_list`: vec_map으로 구성된 재판매 아이템 리스트
     - key - ResellerItem ID
-    - value - ResellerItem Object that stored resold item information.
+    - value - 재판매 정보가 저장된 ResellerItem Object
 
 </details>
 
 ## Struct `ResellerItem`
-Item Object that stored resale item information.
+재판매 마켓플레이스 Object. 구매한 게임을 재판매 하기 위한 정보가 저장되어 있으며 모듈 배포 시 Shared Object로 공유됩니다.
 ```rust
 struct ResellerItem has key, store {
     id: UID,
@@ -153,16 +153,16 @@ struct ResellerItem has key, store {
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `reseller`: Reseller name
-- `description`: Description about resold item
-- `price`: Price(USD)
-- `item`: Resold item object(License Object)
+- `id`: Sui 오브젝트 고유 아이디
+- `reseller`: 재판매자 이름
+- `description`: 재판매 아이템 설명
+- `price`: 가격(USD)
+- `item`: 재판매 아이템(License Object)
 
 </details>
 
 ## Struct `License`
-Object that stored game price and authentication information. Save in Game Object.
+Game Object에 종속되어 판매 금액, 인증 및 재판매에 대한 정보를 가지는 Object
 ```rust
 struct License has key, store {
     id: UID,
@@ -179,22 +179,22 @@ struct License has key, store {
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `name`: License name
-- `thumbnail`: License representative image (thumbnail image)
-- `short_description`: Short license introduction in different languages
+- `id`: Sui 오브젝트 고유 아이디
+- `name`: 라이선스 이름
+- `thumbnail`: 대표 이미지(작은 이미지)
+- `short_intro`: 언어별 짧은 게임 소개
     - key - ISO 639 Alpha-2 Language code
-    - value - Short license introduction
-- `publisher_price`: The Publisher Price guarantees the minimum price of the license. [More information](https://likhogames.gitbook.io/proi-protocol/protocol-overview/creating-license#publisher-price)
-- `discount_rate`: Discount rate to publisher price
-- `royalty_rate`: Royalty on resale
-- `permit_resale`: Permit resale
-- `limit_auth_count`: Limit authentication count
+    - value - 게임 소개 
+- `publisher_price`: 퍼블리셔가 지정한 가격
+- `discount_rate`: 퍼블리셔가 설정한 할인 비율, 퍼블리셔 가격 기준 할인 적용
+- `royalty_rate`: 재판매 시 로열티 비율
+- `permit_resale`: 재판매 허용 여부
+- `limit_auth_count`: 인증 가능 횟수
 
 </details>
 
 ## Struct `LicenseKey`
-License key object given when purchasing a license
+유저가 구매한 라이선스정보가 기록된 NFT 오브젝트
 ```rust
 struct LicenseKey has key, store{
     id: UID,
@@ -210,19 +210,19 @@ struct LicenseKey has key, store{
 <details>
 <summary>Fields</summary>
 
-- `id`: Sui Object unique id
-- `game_id`: The game_id, which uniquely identifies a game
-- `license_id`: License Object ID
-- `auth_count`: Authentication count
-- `license_name`: License name
-- `license_thumbnail`: License representative image (thumbnail image)
-- `owner`: LicenseKey Object owner
-- `user`: Last authenticated user address
+- `id`: Sui 오브젝트 고유 아이디
+- `game_id`: 게임을 고유하게 구분할 수 있는 game_id
+- `license_id`: 구매한 라이선스 Object ID
+- `auth_count`: 인증 횟수
+- `license_name`: 라이선스 이름
+- `license_thumbnail`: 라이선스 대표 이미지
+- `owner`: 라이선스키를 소유한 주소
+- `user`: 마지막으로 인증한 유저 주소
 
 </details>
 
 ## Struct `RegisterGameEvent`
-Registering game event object
+게임 등록 이벤트 오브젝트
 ```rust
 struct RegisterGameEvent has copy, drop{
     game_id: String
@@ -231,12 +231,12 @@ struct RegisterGameEvent has copy, drop{
 <details>
 <summary>Fields</summary>
 
-- `game_id`: The game_id, which uniquely identifies a game
+- `game_id`: 게임을 고유하게 구분할 수 있는 game_id
 
 </details>
 
 ## Struct `CreateLicenseEvent`
-Creating license event object
+라이선스 생성 이벤트 오브젝트
 ```rust
 struct CreateLicenseEvent has copy, drop{
     game_id: String,
@@ -246,13 +246,13 @@ struct CreateLicenseEvent has copy, drop{
 <details>
 <summary>Fields</summary>
 
-- `game_id`: The game_id, which uniquely identifies a game
+- `game_id`: 게임을 고유하게 구분할 수 있는 game_id
 - `license_id`: License Object ID
 
 </details>
 
 ## Struct `PurchaseEvent`
-Purchasing event object
+구매 이벤트 오브젝트
 ```rust
 struct PurchaseEvent has copy, drop{
     game_id: String,
@@ -263,14 +263,14 @@ struct PurchaseEvent has copy, drop{
 <details>
 <summary>Fields</summary>
 
-- `game_id`: The game_id, which uniquely identifies a game
+- `game_id`: 게임을 고유하게 구분할 수 있는 game_id
 - `license_id`: License Object ID
-- `license_key_id`: LicenseKey Object ID
+- `license_key_id`: 유저에게 전달한 LicenseKey Object ID
 
 </details>
 
 ## Struct `ResellEvent`
-Reselling event object
+구매 이벤트 오브젝트
 ```rust
 struct ResellEvent has copy, drop{
     item_id: ID
@@ -313,24 +313,24 @@ public entry fun regist_game(
 <summary>Parameter</summary>
 
 - `proi_shop`: ProiShop Shared Object
-- `game_id_bytes`: The game_id, which uniquely identifies a game, Not changed
-- `name_bytes`: Game name
-- `thumbnail`: Game representative image (thumbnail image)
-- `image_url`: List of Game introduction image URLs
-- `video_url`: List of Game introduction video URLs
-- `short_description`: Short game introduction in different languages
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id, 변경 불가
+- `name_bytes`: 게임 이름
+- `thumbnail`: 대표 이미지(작은 이미지)
+- `image_url`: 게임 소개 이미지 URL 리스트
+- `video_url`: 게임 소개 영상 URL 리스트
+- `short_intro`: 언어별 짧은 게임 소개
     - key - ISO 639 Alpha-2 Language code
-    - value - Short game introduction
-- `description`: Game description. recommanded markdown
-- `release_date`: release date
-- `genre`: genre
-- `developer`: Game developer name
-- `publisher`: Game publisher name
-- `language`: List of support language, ISO 639 Alpha-2 Language code
-- `platform`: List of support platform
-- `system_requirements`: System specs and requirements. recommanded markdown
-- `sale_lock`: sales On/Off
-- `submission_fee`: Submission fee(PROI)
+    - value - 게임 소개 
+- `intro`: 게임 소개 글. 마크다운 문법 권장
+- `release_date`: 출시 일자
+- `genre`: 장르
+- `developer`: 개발사
+- `publisher`: 배급사
+- `language`: 지원 언어 리스트, ISO 639 Alpha-2 Language code
+- `platform`: 지원 플랫폼 리스트
+- `system_requirements`: 시스템 권장 사양. 마크다운 문법 권장
+- `sale_lock`: 판매 On/Off
+- `submission_fee`: 게임 등록 수수료(PROI)
 
 </details>
 
@@ -362,24 +362,24 @@ public entry fun update_game(
 <summary>Parameter</summary>
 
 - `proi_shop`: ProiShop Shared Object
-- `cap`: Capability object for Game Object
-- `game_id_bytes`: The game_id, which uniquely identifies a game, Not changed
-- `name_bytes`: Game name
-- `thumbnail`: Game representative image (thumbnail image)
-- `image_url`: List of Game introduction image URLs
-- `video_url`: List of Game introduction video URLs
-- `short_description`: Short game introduction in different languages
+- `cap`: Game Object에 대한 권한 증명 오브젝트
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id, 변경 불가
+- `name_bytes`: 게임 이름
+- `thumbnail`: 대표 이미지(작은 이미지)
+- `image_url`: 게임 소개 이미지 URL 리스트
+- `video_url`: 게임 소개 영상 URL 리스트
+- `short_intro`: 언어별 짧은 게임 소개
     - key - ISO 639 Alpha-2 Language code
-    - value - Short game introduction
-- `description`: Game description. recommanded markdown
-- `release_date`: release date
-- `genre`: genre
-- `developer`: Game developer name
-- `publisher`: Game publisher name
-- `language`: List of support language, ISO 639 Alpha-2 Language code
-- `platform`: List of support platform
-- `system_requirements`: System specs and requirements. recommanded markdown
-- `sale_lock`: sales On/Off
+    - value - 게임 소개 
+- `intro`: 게임 소개 글. 마크다운 문법 권장
+- `release_date`: 출시 일자
+- `genre`: 장르
+- `developer`: 개발사
+- `publisher`: 배급사
+- `language`: 지원 언어 리스트, ISO 639 Alpha-2 Language code
+- `platform`: 지원 플랫폼 리스트
+- `system_requirements`: 시스템 권장 사양. 마크다운 문법 권장
+- `sale_lock`: 판매 On/Off
 
 </details>
 
@@ -405,18 +405,18 @@ public entry fun create_license(
 <summary>Parameter</summary>
 
 - `proi_shop`: ProiShop Shared Object
-- `cap`: Capability object for Game Object
-- `game_id_bytes`: The game_id, which uniquely identifies a game
-- `name_bytes`: License name
-- `thumbnail`: License representative image (thumbnail image)
-- `short_description`: Short license introduction in different languages
+- `cap`: Game Object에 대한 권한 증명 오브젝트
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id
+- `name_bytes`: 라이선스 이름
+- `thumbnail`: 대표 이미지(작은 이미지)
+- `short_intro`: 언어별 짧은 게임 소개
     - key - ISO 639 Alpha-2 Language code
-    - value - Short license introduction
-- `publisher_price`: The Publisher Price guarantees the minimum price of the license. [More information](https://likhogames.gitbook.io/proi-protocol/protocol-overview/creating-license#publisher-price)
-- `discount_rate`: Discount rate to publisher price
-- `royalty_rate`: Royalty on resale
-- `permit_resale`: Permit resale
-- `limit_auth_count`: Limit authentication count
+    - value - 게임 소개 
+- `publisher_price`: 퍼블리셔가 지정한 가격
+- `discount_rate`: 퍼블리셔가 설정한 할인 비율, 퍼블리셔 가격 기준 할인 적용
+- `royalty_rate`: 재판매 시 로열티 비율
+- `permit_resale`: 재판매 허용 여부
+- `limit_auth_count`: 인증 가능 횟수
 
 </details>
 
@@ -440,16 +440,16 @@ public entry fun update_license(
 <summary>Parameter</summary>
 
 - `proi_shop`: ProiShop Shared Object
-- `cap`: Capability object for Game Object
-- `game_id_bytes`: The game_id, which uniquely identifies a game
-- `name_bytes`: License name
-- `thumbnail`: License representative image (thumbnail image)
-- `short_description`: Short license introduction in different languages
+- `cap`: Game Object에 대한 권한 증명 오브젝트
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id
+- `name_bytes`: 라이선스 이름
+- `thumbnail`: 대표 이미지(작은 이미지)
+- `short_intro`: 언어별 짧은 게임 소개
     - key - ISO 639 Alpha-2 Language code
-    - value - Short license introduction
-- `publisher_price`: The Publisher Price guarantees the minimum price of the license. [More information](https://likhogames.gitbook.io/proi-protocol/protocol-overview/creating-license#publisher-price)
-- `discount_rate`: Discount rate to publisher price
-- `royalty_rate`: Royalty on resale
+    - value - 게임 소개 
+- `publisher_price`: 퍼블리셔가 지정한 가격
+- `discount_rate`: 퍼블리셔가 설정한 할인 비율, 퍼블리셔 가격 기준 할인 적용
+- `royalty_rate`: 재판매 시 로열티 비율
 
 </details>
 
@@ -469,10 +469,10 @@ public entry fun purchase(
 <summary>Parameter</summary>
 
 - `proi_shop`: ProiShop Shared Object
-- `game_id_bytes`: The game_id, which uniquely identifies a game
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id
 - `license_id`: License Object ID
-- `paid`: Payment(PROI)
-- `buyer`: Buyer address
+- `paid`: 지불 금액(PROI)
+- `buyer`: 구매한 유저 주소
 
 </details>
 
@@ -511,10 +511,10 @@ public entry fun list_license_key(
 
 - `proi_shop`: ProiShop Shared Object
 - `reseller_shop`: ResellerShop Shared Object
-- `license_key`: Resold LicenseKey Object
-- `reseller_bytes`: Reseller name
-- `description_bytes`: Description about resold item
-- `price`: Price(USD)
+- `license_key`: 판매하려는 LicenseKey Object
+- `reseller_bytes`: 판매자 이름
+- `description_bytes`: 판매 아이템 설명
+- `price`: 판매 가격
 
 </details>
 
@@ -536,9 +536,9 @@ public entry fun resell(
 
 - `proi_shop`: ProiShop Shared Object
 - `reseller_shop`: ResellerShop Shared Object
-- `game_id_bytes`: The game_id, which uniquely identifies a game
-- `item_id`: Purchasing ResellerItem Object ID
-- `paid`: Payment(PROI)
-- `buyer`: Buyer address
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id
+- `item_id`: 구매한 ResellerItem Object ID
+- `paid`: 지불 금액(PROI)
+- `buyer`: 구매한 유저 주소
 
 * * *
