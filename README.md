@@ -15,7 +15,7 @@ This is a module for a marketplace smart contract that enables the registration 
 - [API Doc](/docs/api/shop.md)
 ### Module `Proi`
 All commercial transactions conducted on the Proi Protocol must utilize the PROI token. The Proi module is a comprehensive smart contract module for the PROI token, including functionalities such as staking, storing, transferring, and more.
-- [token](/sources/proi.move)
+- [source](/sources/proi.move)
 - [API Doc](/docs/api/proi.md)
 * * *
 ## Link
