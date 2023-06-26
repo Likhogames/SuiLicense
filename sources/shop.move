@@ -36,7 +36,7 @@ module ProiProtocol::shop {
     struct ProiShop has key {
         id: UID,
         submission_fee: u64,    // PROI. Update with Oracle (ex Switchboard)
-        purchase_fee_rate: u64,  // Basis point
+        purchase_fee_rate: u64, 
         game_list: VecMap<String, Game>,
         purchase_fee_storage: PurchaseFeeStorage,
         submission_fee_storage: SubmissionFeeStorage
@@ -68,7 +68,7 @@ module ProiProtocol::shop {
 
     struct ResellerShop has key {
         id: UID,
-        item_list: VecMap<ID, ResellerItem>    // key : game_id, val : listed ResellerItem
+        item_list: VecMap<ID, ResellerItem> 
     }
     
     struct ResellerItem has key, store {
