@@ -2,6 +2,7 @@
 module ProiProtocol::shop {
     
     use std::string::{Self, String};
+    use std::vector;
 
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
@@ -12,6 +13,7 @@ module ProiProtocol::shop {
     use sui::event;
     use sui::tx_context::{Self, TxContext};
     use sui::vec_map::{Self,VecMap};
+    use sui::vec_set::{Self,VecSet};
 
     use ProiProtocol::proi::{PROI};
 
@@ -27,6 +29,8 @@ module ProiProtocol::shop {
     const ENotAllowedResell: u64 = 9;
     const ENotExistItemID: u64 = 10;
     const EOutOfIndex: u64 = 11;
+    const EWrongLanguageCodePair: u64 = 12;
+    const ELockedSale: u64 = 13;
 
     const MaxDiscount: u64 = 10000;
     const MaxPurchaseFeeRate: u64 = 10000;
@@ -46,8 +50,19 @@ module ProiProtocol::shop {
         id: UID,
         game_id: String,
         name: String,
-        // For testing purposes, other fields have been omitted. 
-        // You can refer to the API documentation for the omitted fields.
+        thumbnail: vector<u8>,
+        image_url: VecSet<vector<u8>>,
+        video_url: VecSet<vector<u8>>,
+        short_intro: VecMap<vector<u8>, vector<u8>>,
+        intro: vector<u8>,
+        release_date: vector<u8>,
+        genre: vector<u8>,
+        developer: vector<u8>,
+        publisher: vector<u8>,
+        language: VecSet<vector<u8>>,
+        platform: VecSet<vector<u8>>,
+        system_requirements: vector<u8>,
+        sale_lock: bool,
         license_list: VecMap<ID, License> 
     }
 
@@ -83,7 +98,7 @@ module ProiProtocol::shop {
         id: UID,
         name: String,
         thumbnail: String,
-        short_intro: VecMap<String, String>,
+        short_intro: VecMap<vector<u8>, vector<u8>>,
         publisher_price: u64,
         discount_rate: u64,
         royalty_rate: u64,
@@ -149,6 +164,19 @@ module ProiProtocol::shop {
         proi_shop: &mut ProiShop,
         game_id_bytes: vector<u8>,
         name_bytes: vector<u8>,
+        thumbnail: vector<u8>,
+        image_url: vector<vector<u8>>,
+        video_url: vector<vector<u8>>,
+        short_intro: vector<vector<vector<u8>>>,
+        intro: vector<u8>,
+        release_date: vector<u8>,
+        genre: vector<u8>,
+        developer: vector<u8>,
+        publisher: vector<u8>,
+        language: vector<vector<u8>>,
+        platform: vector<vector<u8>>,
+        system_requirements: vector<u8>,
+        sale_lock: bool,
         submission_fee: Coin<PROI>,
         ctx: &mut TxContext
     ) {
@@ -167,12 +195,25 @@ module ProiProtocol::shop {
         balance::join(&mut fee_storage.fees, balance_fee);
 
         // Create Game object
-        let game = Game{
-            id: object::new(ctx),
+        let game = create_game_object(
             game_id,
-            name: string::utf8(name_bytes),
-            license_list: vec_map::empty<ID, License>(),
-        };
+            name_bytes,
+            thumbnail,
+            image_url,
+            video_url,
+            short_intro,
+            intro,
+            release_date,
+            genre,
+            developer,
+            publisher,
+            language,
+            platform,
+            system_requirements,
+            sale_lock,
+            ctx
+        );
+
 
         let cap = GamePubCap{
             id: object::new(ctx),
@@ -192,6 +233,101 @@ module ProiProtocol::shop {
         // TODO : Update Game Object
     }
 
+    fun create_game_object(
+        game_id: String,
+        name_bytes: vector<u8>,
+        thumbnail: vector<u8>,
+        v_image_url: vector<vector<u8>>,
+        v_video_url: vector<vector<u8>>,
+        v_short_intro: vector<vector<vector<u8>>>,
+        intro: vector<u8>,
+        release_date: vector<u8>,
+        genre: vector<u8>,
+        developer: vector<u8>,
+        publisher: vector<u8>,
+        v_language: vector<vector<u8>>,
+        v_platform: vector<vector<u8>>,
+        system_requirements: vector<u8>,
+        sale_lock: bool,
+        ctx: &mut TxContext
+    ): Game{
+        // Image list
+        let image_url = vec_set::empty<vector<u8>>();
+        let i = 0;
+        let n = vector::length(&v_image_url);
+        while (i < n){
+            vec_set::insert(&mut image_url, *vector::borrow(&v_image_url, i));
+            i = i + 1;
+        };
+
+        // Video list
+        let video_url = vec_set::empty<vector<u8>>();
+        i = 0;
+        n = vector::length(&v_video_url);
+        while (i < n){
+            vec_set::insert(&mut video_url, *vector::borrow(&v_video_url, i));
+            i = i + 1;
+        };
+
+        // Short intro
+        let short_intro = vec_map::empty<vector<u8>, vector<u8>>();
+        i = 0;
+        n = vector::length(&v_short_intro);
+        while (i < n){
+            let pair = *vector::borrow(&v_short_intro, i);
+            // key - value pair check 
+            assert!(vector::length(&pair) == 2, 0);
+            
+            // key: ISO 639 Alpha-2 Language code
+            let key = *vector::borrow(&pair, 0);
+            let key_str = string::utf8(key);
+            assert!(string::length(&key_str) == 2, 0);
+            let value =  *vector::borrow(&pair, 1);
+
+            vec_map::insert(&mut short_intro, key, value);
+            i = i + 1;
+        };
+        
+        // Support language list
+        let language = vec_set::empty<vector<u8>>();
+        i = 0;
+        n = vector::length(&v_language);
+        while (i < n){
+            vec_set::insert(&mut language, *vector::borrow(&v_language, i));
+            i = i + 1;
+        };
+
+        // Support plaform list
+        let platform = vec_set::empty<vector<u8>>();
+        i = 0;
+        n = vector::length(&v_platform);
+        while (i < n){
+            vec_set::insert(&mut platform, *vector::borrow(&v_platform, i));
+            i = i + 1;
+        };
+
+        let game = Game{
+            id: object::new(ctx),
+            game_id,
+            name: string::utf8(name_bytes),
+            thumbnail,
+            image_url,
+            video_url,
+            short_intro,
+            intro,
+            release_date,
+            genre,
+            developer,
+            publisher,
+            language,
+            platform,
+            system_requirements,
+            sale_lock,
+            license_list: vec_map::empty<ID, License>(),
+        };
+        game
+    }
+
     /// Create License
     public entry fun create_license(
         proi_shop: &mut ProiShop,
@@ -199,7 +335,7 @@ module ProiProtocol::shop {
         game_id_bytes: vector<u8>,
         name_bytes: vector<u8>,
         thumbnail: vector<u8>,
-        // short_intro: VecMap<String, String>,
+        v_short_intro: vector<vector<vector<u8>>>,
         publisher_price: u64,
         discount_rate: u64,
         royalty_rate: u64,
@@ -219,11 +355,29 @@ module ProiProtocol::shop {
         assert!(object::id(game) == cap.for, ENotPublisher);
 
         // Create License object
+        let short_intro = vec_map::empty<vector<u8>, vector<u8>>();
+        let i = 0;
+        let n = vector::length(&v_short_intro);
+        while (i < n){
+            let pair = *vector::borrow(&v_short_intro, i);
+            // key - value pair check 
+            assert!(vector::length(&pair) == 2, 0);
+            
+            // key: ISO 639 Alpha-2 Language code
+            let key = *vector::borrow(&pair, 0);
+            let key_str = string::utf8(key);
+            assert!(string::length(&key_str) == 2, 0);
+            let value =  *vector::borrow(&pair, 1);
+
+            vec_map::insert(&mut short_intro, key, value);
+            i = i + 1;
+        };
+
         let new_license = License{
             id: object::new(ctx),
             name: string::utf8(name_bytes),
             thumbnail: string::utf8(thumbnail),
-            short_intro: vec_map::empty<String, String>(),
+            short_intro,
             publisher_price,
             discount_rate,
             royalty_rate,
@@ -252,8 +406,12 @@ module ProiProtocol::shop {
     ){
         // Load License
         let game_id = string::utf8(game_id_bytes);
+        let game = get_game(&proi_shop.game_list, &game_id);
         let license = get_license(&proi_shop.game_list, &game_id, &license_id);
         
+        // Sale On/Off
+        assert!(game.sale_lock == false, ELockedSale);
+
         // Discount
         let publisher_price = license.publisher_price;
         if (license.discount_rate > 0){
@@ -328,11 +486,11 @@ module ProiProtocol::shop {
     }
     
     public fun get_game(
-        proi_shop: & ProiShop,
+        game_list: & VecMap<String, Game>,
         game_id: & String
     ): & Game{
-        assert!(vec_map::contains(&proi_shop.game_list, game_id) == true, ENotExistGameID);
-        vec_map::get(&proi_shop.game_list, game_id)
+        assert!(vec_map::contains(game_list, game_id) == true, ENotExistGameID);
+        vec_map::get(game_list, game_id)
     }
 
     public fun get_license(
@@ -340,8 +498,7 @@ module ProiProtocol::shop {
         game_id: & String,
         license_id: & ID
     ): & License{
-        assert!(vec_map::contains(game_list, game_id) == true, ENotExistGameID);
-        let game = vec_map::get(game_list, game_id);
+        let game = get_game(game_list, game_id);
         assert!(vec_map::contains(&game.license_list, license_id) == true, ENotExistLicenseID);
         vec_map::get(& game.license_list, license_id)
     }
@@ -481,6 +638,16 @@ module ProiProtocol::shop {
     public fun init_for_testing(ctx: &mut TxContext) {
         init(ctx)
     }
+
+    #[test_only]
+    public fun get_game_for_testing(
+        proi_shop: & ProiShop,
+        game_id: & String
+    ): &Game{
+        assert!(vec_map::contains(&proi_shop.game_list, game_id) == true, ENotExistGameID);
+        vec_map::get(&proi_shop.game_list, game_id)
+    }
+
     #[test_only]
     public fun get_item_id_by_idx_for_testing(
         reseller_shop: &ResellerShop,

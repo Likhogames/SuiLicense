@@ -5,6 +5,7 @@ module ProiProtocol::Tests {
     
     use std::debug;
     use std::string::{Self};
+    use std::vector;
     use sui::coin::{Self, Coin, TreasuryCap};
     use sui::object;
     use sui::test_scenario;
@@ -52,16 +53,46 @@ module ProiProtocol::Tests {
             let proi_shop = test_scenario::take_shared<ProiShop>(scenario);
             let company_coin = test_scenario::take_from_sender<Coin<PROI>>(scenario);
             let ctx = test_scenario::ctx(scenario);
-
             let submission_fee = coin::take(coin::balance_mut(&mut company_coin), 100, ctx);
+
+            let v_image_url = vector::empty<vector<u8>>();
+            vector::push_back(&mut v_image_url, b"ipfs://{image_1}");
+            vector::push_back(&mut v_image_url, b"ipfs://{image_2}");
+            let v_video_url = vector::empty<vector<u8>>();
+            vector::push_back(&mut v_video_url, b"ipfs://{video_1}");
+            vector::push_back(&mut v_video_url, b"ipfs://{video_2}");
+            let v_short_intro = vector::empty<vector<vector<u8>>>();
+            let v_pair = vector::empty<vector<u8>>();
+            vector::push_back(&mut v_pair, b"en");
+            vector::push_back(&mut v_pair, b"short intro.");
+            vector::push_back(&mut v_short_intro, v_pair);
+            let v_language = vector::empty<vector<u8>>();
+            vector::push_back(&mut v_language, b"en");
+            vector::push_back(&mut v_language, b"zh");
+            let v_platform = vector::empty<vector<u8>>();
+            vector::push_back(&mut v_platform, b"pc");
+            vector::push_back(&mut v_platform, b"ps");
+
             shop::regist_game(
                 &mut proi_shop,
                 b"com.blizzard.diablo4",
                 b"Blizzard",
+                b"ipfs://{thumbnail}",
+                v_image_url,
+                v_video_url,
+                v_short_intro,
+                b"intro",
+                b"2024-01-01",
+                b"puzzle",
+                b"blizzard",
+                b"blizzard",
+                v_language,
+                v_platform,
+                b"system_requirements",
+                false,
                 submission_fee,
                 ctx
             );
-            
 
             test_scenario::return_to_sender(scenario, company_coin);
             test_scenario::return_shared(proi_shop);
@@ -73,13 +104,19 @@ module ProiProtocol::Tests {
             let proi_shop = test_scenario::take_shared<ProiShop>(scenario);
             let cap = test_scenario::take_from_sender<GamePubCap>(scenario);
             let ctx = test_scenario::ctx(scenario);
+            let v_short_intro = vector::empty<vector<vector<u8>>>();
+            let v_pair = vector::empty<vector<u8>>();
+            vector::push_back(&mut v_pair, b"en");
+            vector::push_back(&mut v_pair, b"short intro.");
+            vector::push_back(&mut v_short_intro, v_pair);
 
             shop::create_license(
                 &mut proi_shop,
                 &cap,
                 b"com.blizzard.diablo4",
                 b"Digital Edition",
-                b"https://ipfs",
+                b"ipfs://{img_url}",
+                v_short_intro,
                 70,
                 0,
                 5,
@@ -102,7 +139,7 @@ module ProiProtocol::Tests {
             let paid = coin::take(coin::balance_mut(&mut seller_coin), 70, ctx);
 
             let game_id = string::utf8(game_id_bytes);
-            let game = shop::get_game(&proi_shop, &game_id);
+            let game = shop::get_game_for_testing(&proi_shop, &game_id);
             let license = shop::get_license_by_idx(game, 0);
 
             shop::purchase(
