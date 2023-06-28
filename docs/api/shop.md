@@ -25,6 +25,22 @@ struct ProiShop has key {
 
 </details>
 
+## Struct `ProiCap`
+Capability Object for ProiShop Object
+```rust
+struct ProiCap has key, store{
+    id: UID,
+    for: ID
+}
+```
+<details>
+<summary>Fields</summary>
+
+- `id`: Sui Object unique id
+- `for`: ProiShop Object ID
+
+</details>
+
 ## Struct `Game`
 The Game Object that stores game information.
 ```rust
@@ -540,5 +556,79 @@ public entry fun resell(
 - `item_id`: Purchasing ResellerItem Object ID
 - `paid`: Payment(PROI)
 - `buyer`: Buyer address
+
+</details>
+
+## Function `take_proi_for_labs`
+Take the stored PROI token from purchase fee storage. 
+```rust
+public entry fun take_proi_for_labs(
+    proi_shop: &mut ProiShop,
+    cap: & ProiCap,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `proi_shop`: ProiShop Shared Object
+- `cap`: Capability of ProiShop Object
+
+</details>
+
+## Function `take_proi_for_publisher`
+Take the stored PROI tokens after purchase.
+```rust
+public entry fun take_proi_for_publisher(
+    proi_shop: &mut ProiShop,
+    cap: & GamePubCap,
+    game_id_bytes: vector<u8>,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `proi_shop`: ProiShop Shared Object
+- `cap`: Capability of Game Object
+- `game_id_bytes`: The game_id, which uniquely identifies a game
+
+</details>
+
+## Function `take_proi_for_reseller`
+Take the stored PROI tokens after resale.
+```rust
+public entry fun take_proi_for_reseller(
+    reseller_shop: &mut ResellerShop,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `reseller_shop`: ResellerShop Shared Object
+
+</details>
+
+## Function `take_proi_for_publisher`
+Take the stored PROI token for royalty. 
+```rust
+public entry fun take_proi_for_royalty(
+    proi_shop: &mut ProiShop,
+    reseller_shop: &mut ResellerShop,
+    cap: & GamePubCap,
+    game_id_bytes: vector<u8>,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `proi_shop`: ProiShop Shared Object
+- `reseller_shop`: ResellerShop Shared Object
+- `cap`: Capability of Game Object
+- `game_id_bytes`: The game_id, which uniquely identifies a game
+
+</details>
 
 * * *

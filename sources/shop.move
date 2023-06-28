@@ -15,7 +15,7 @@ module ProiProtocol::shop {
     use sui::vec_map::{Self,VecMap};
     use sui::vec_set::{Self,VecSet};
 
-    use ProiProtocol::proi::{PROI};
+    use ProiProtocol::proi::{Self, PROI};
 
     const ENotPublisher: u64 = 0;
     const EAlreadyExistGameID: u64 = 1;
@@ -31,6 +31,8 @@ module ProiProtocol::shop {
     const EOutOfIndex: u64 = 11;
     const EWrongLanguageCodePair: u64 = 12;
     const ELockedSale: u64 = 13;
+    const ENoPROIs: u64 = 14;
+
 
     const MaxDiscount: u64 = 10000;
     const MaxPurchaseFeeRate: u64 = 10000;
@@ -44,6 +46,11 @@ module ProiProtocol::shop {
         game_list: VecMap<String, Game>,
         purchase_fee_storage: PurchaseFeeStorage,
         submission_fee_storage: SubmissionFeeStorage
+    }
+
+    struct ProiCap has key, store{
+        id: UID,
+        for: ID
     }
 
     struct Game has key, store {
@@ -144,14 +151,21 @@ module ProiProtocol::shop {
             fees: balance::zero<PROI>()
         };
 
-        transfer::share_object(ProiShop {
+        let proi_shop = ProiShop {
             id: object::new(ctx),
-            submission_fee: 100,
-            purchase_fee_rate: 5,
+            submission_fee: 100,    // 100 USD
+            purchase_fee_rate: 100, // 1%, 100 of 10000
             game_list: vec_map::empty<String, Game>(),
             purchase_fee_storage: p_storage,
             submission_fee_storage: s_storage
-        });
+        };
+
+        transfer::transfer(ProiCap{
+            id: object::new(ctx),
+            for: object::id(&proi_shop)
+        }, tx_context::sender(ctx));
+
+        transfer::share_object(proi_shop);
 
         transfer::share_object(ResellerShop {
             id: object::new(ctx),
@@ -349,9 +363,7 @@ module ProiProtocol::shop {
 
         // Game Publisher Capability
         let game_id = string::utf8(game_id_bytes);
-        assert!(vec_map::contains(&proi_shop.game_list, &game_id) == true, ENotExistGameID);
-        
-        let game = vec_map::get_mut(&mut proi_shop.game_list, &game_id);
+        let game = get_game_mut(&mut proi_shop.game_list, &game_id);
         assert!(object::id(game) == cap.for, ENotPublisher);
 
         // Create License object
@@ -422,10 +434,13 @@ module ProiProtocol::shop {
         
         // Pay a fee
         if (proi_price > 0){
-            let fee = proi_price - (proi_price * proi_shop.purchase_fee_rate / MaxPurchaseFeeRate);
-            let purchase_fee = coin::take(coin::balance_mut(&mut paid), fee, ctx);
-            let fee_storage = &mut proi_shop.purchase_fee_storage;
-            balance::join(&mut fee_storage.fees, coin::into_balance(purchase_fee));
+            // truncate decimal places
+            let fee = (proi_price * proi_shop.purchase_fee_rate / MaxPurchaseFeeRate);
+            if (fee > 0){
+                let purchase_fee = coin::take(coin::balance_mut(&mut paid), fee, ctx);
+                let fee_storage = &mut proi_shop.purchase_fee_storage;
+                balance::join(&mut fee_storage.fees, coin::into_balance(purchase_fee));
+            }
         };
         
         // Save paid
@@ -491,6 +506,14 @@ module ProiProtocol::shop {
     ): & Game{
         assert!(vec_map::contains(game_list, game_id) == true, ENotExistGameID);
         vec_map::get(game_list, game_id)
+    }
+
+    public fun get_game_mut(
+        game_list: &mut VecMap<String, Game>,
+        game_id: & String
+    ): &mut Game{
+        assert!(vec_map::contains(game_list, game_id) == true, ENotExistGameID);
+        vec_map::get_mut(game_list, game_id)
     }
 
     public fun get_license(
@@ -583,18 +606,21 @@ module ProiProtocol::shop {
         );
 
         if (license.royalty_rate > 0){
-            let royalty_price = item_info.price - (item_info.price * license.royalty_rate / MaxRoyaltyRate);
-            let royalty = coin::take(coin::balance_mut(&mut paid), royalty_price, ctx);
+            // truncate decimal places
+            let royalty_price = (proi_price * license.royalty_rate / MaxRoyaltyRate);
+            if (royalty_price > 0){
+                let royalty = coin::take(coin::balance_mut(&mut paid), royalty_price, ctx);
 
-            // Save Royalty
-            if (dof::exists_<String>(&reseller_shop.id, game_id)) {
-                coin::join(
-                    dof::borrow_mut<String, Coin<PROI>>(&mut proi_shop.id, game_id),
-                    royalty
-                );
-            } else {
-                dof::add(&mut reseller_shop.id, game_id, royalty);
-            };
+                // Save Royalty
+                if (dof::exists_<String>(&reseller_shop.id, game_id)) {
+                    coin::join(
+                        dof::borrow_mut<String, Coin<PROI>>(&mut reseller_shop.id, game_id),
+                        royalty
+                    );
+                } else {
+                    dof::add(&mut reseller_shop.id, game_id, royalty);
+                };
+            }
         };
         
         // Save paid
@@ -625,13 +651,84 @@ module ProiProtocol::shop {
         event::emit(ResellEvent{item_id})
     }
 
+    // Take PROI for Purchase fees
+    public entry fun take_proi_for_labs(
+        proi_shop: &mut ProiShop,
+        cap: & ProiCap,
+        ctx: &mut TxContext
+    ){
+        // Capability
+        assert!(object::id(proi_shop) == cap.for, ENotPublisher);
+
+        // Purchase fees
+        let storage = &mut proi_shop.purchase_fee_storage;
+        let amount = balance::value(&storage.fees);
+
+        assert!(amount > 0, ENoPROIs);
+
+        let proi = coin::take(&mut storage.fees, amount, ctx);
+        transfer::public_transfer(proi, tx_context::sender(ctx))
+    }
+
+    // Take PROI for game publisher
+    public entry fun take_proi_for_publisher(
+        proi_shop: &mut ProiShop,
+        cap: & GamePubCap,
+        game_id_bytes: vector<u8>,
+        ctx: &mut TxContext
+    ){
+        // Capability
+        let game_id = string::utf8(game_id_bytes);
+        let game = get_game(&proi_shop.game_list, &game_id);
+        assert!(object::id(game) == cap.for, ENotPublisher);
+
+        // Check stored PROI
+        assert!(dof::exists_<String>(&proi_shop.id, game_id) == true, ENoPROIs);
+
+        let proi = dof::remove<String, Coin<PROI>>(&mut proi_shop.id, game_id);
+        transfer::public_transfer(proi, tx_context::sender(ctx))
+    }
+
+    // Take PROI for reseller
+    public entry fun take_proi_for_reseller(
+        reseller_shop: &mut ResellerShop,
+        ctx: &mut TxContext
+    ){
+        // Check stored PROI
+        let sender = tx_context::sender(ctx);
+        assert!(dof::exists_<address>(&reseller_shop.id, sender) == true, ENoPROIs);
+
+        let proi = dof::remove<address, Coin<PROI>>(&mut reseller_shop.id, sender);
+        transfer::public_transfer(proi, sender)
+    }
+
+    // Take PROI for game publisher
+    public entry fun take_proi_for_royalty(
+        proi_shop: &mut ProiShop,
+        reseller_shop: &mut ResellerShop,
+        cap: & GamePubCap,
+        game_id_bytes: vector<u8>,
+        ctx: &mut TxContext
+    ){
+        // Capability
+        let game_id = string::utf8(game_id_bytes);
+        let game = get_game(&proi_shop.game_list, &game_id);
+        assert!(object::id(game) == cap.for, ENotPublisher);
+
+        // Check stored PROI
+        assert!(dof::exists_<String>(&reseller_shop.id, game_id) == true, ENoPROIs);
+
+        let proi = dof::remove<String, Coin<PROI>>(&mut reseller_shop.id, game_id);
+        transfer::public_transfer(proi, tx_context::sender(ctx))
+    }
+
     /// exchange usd to proi
     public fun change_price_usd_to_proi(
         usd: u64
     ): u64{
         // For testing purposes, PROI has been set to be converted to USD at a 1:1 ratio. 
         // In the future, Every day at a specified time, the PROI:USD ratio is refreshed and applied through Oracle.
-        usd
+        usd * proi::get_decimal()
     }
 
     #[test_only]

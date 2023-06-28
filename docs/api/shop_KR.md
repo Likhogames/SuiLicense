@@ -25,6 +25,22 @@ struct ProiShop has key {
 
 </details>
 
+## Struct `ProiCap`
+ProiShop Object에 대한 권한 증명 오브젝트
+```rust
+struct ProiCap has key, store{
+    id: UID,
+    for: ID
+}
+```
+<details>
+<summary>Fields</summary>
+
+- `id`: Sui 오브젝트 고유 아이디
+- `for`: ProiShop Object ID
+
+</details>
+
 ## Struct `Game`
 게임 정보 Object
 ```rust
@@ -540,5 +556,79 @@ public entry fun resell(
 - `item_id`: 구매한 ResellerItem Object ID
 - `paid`: 지불 금액(PROI)
 - `buyer`: 구매한 유저 주소
+
+</details>
+
+## Function `take_proi_for_labs`
+Take the stored PROI token from purchase fee storage. 
+```rust
+public entry fun take_proi_for_labs(
+    proi_shop: &mut ProiShop,
+    cap: & ProiCap,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `proi_shop`: ProiShop Shared Object
+- `cap`: ProiShop Object에 대한 권한 증명 오브젝트
+
+</details>
+
+## Function `take_proi_for_publisher`
+Take the stored PROI tokens after purchase.
+```rust
+public entry fun take_proi_for_publisher(
+    proi_shop: &mut ProiShop,
+    cap: & GamePubCap,
+    game_id_bytes: vector<u8>,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `proi_shop`: ProiShop Shared Object
+- `cap`: Game Object에 대한 권한 증명 오브젝트
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id
+
+</details>
+
+## Function `take_proi_for_labs`
+재판매 후 저장된 PROI 토큰 가져오기 
+```rust
+public entry fun take_proi_for_reseller(
+    reseller_shop: &mut ResellerShop,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `reseller_shop`: ResellerShop Shared Object
+
+</details>
+
+## Function `take_proi_for_publisher`
+로열티로 저장된 PROI 토큰 가져오기
+```rust
+public entry fun take_proi_for_royalty(
+    proi_shop: &mut ProiShop,
+    reseller_shop: &mut ResellerShop,
+    cap: & GamePubCap,
+    game_id_bytes: vector<u8>,
+    ctx: &mut TxContext
+)
+```
+<details>
+<summary>Parameter</summary>
+
+- `proi_shop`: ProiShop Shared Object
+- `reseller_shop`: ResellerShop Shared Object
+- `cap`: Game Object에 대한 권한 증명 오브젝트
+- `game_id_bytes`: 게임을 고유하게 구분할 수 있는 game_id
+
+</details>
 
 * * *
