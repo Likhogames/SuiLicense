@@ -4,9 +4,9 @@ Proi Protocol is a decentralized protocol for game distribution, akin to a Web3 
 You can find more information about the Proi Protocol in our [documentation](https://likhogames.gitbook.io/proi-protocol/, "Proi Documents").
 * * *
 ## Tutorial ( Reference Guide )
-- `NotReady`[Accessing Proi Protocol](/docs/tutorial/accessing_Proi_Protocol.md) - How to access Proi Protocol with Sui TypeScript SDK or Sui Rust SDK.
-- `NotReady`[Proi Gaming SDK](/docs/tutorial/Proi_gaming_SDK.md) - How to access Proi Protocol using Proi gaming SDK in Unity and Unreal
-- `NotReady`[Store Interface](/docs/tutorial/store_interface_guide.md) - Guide to build marketplace using the Proi Protocol
+- `NotReady`[Accessing Protocol](/docs/tutorial/accessing_proi_protocol.md) - How to access Proi Protocol with Sui TypeScript SDK or Sui Rust SDK.
+- `NotReady`[Authenticating with SDK](/docs/tutorial/authenticating_with_sdk.md) - How to access Proi Protocol using Proi gaming SDK in Unity and Unreal
+- `NotReady`[Building Store Interface](/docs/tutorial/building_store_interface.md) - Guide to build marketplace using the Proi Protocol
 * * *
 ## Code
 ### Module `Shop`
@@ -20,5 +20,4 @@ All commercial transactions conducted on the Proi Protocol must utilize the PROI
 * * *
 ## Link
 - [Homepage](https://proiprotocol.com/)
-- [Documents](https://likhogames.gitbook.io/proi-protocol/)
-- [Discord](https://discord.gg/h6Mgsv874K)
+- [Documents](https://likhogames.gitbook.io/proi-protocol)
